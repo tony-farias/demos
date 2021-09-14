@@ -17,7 +17,6 @@
 
 # COMMAND ----------
 
-#TODO: Migrate to E2-Demo
 #Athena - AWS' Presto
 #EMR - just use Spark to write Parquet files
 #Checkout prformance comparisons
@@ -139,42 +138,6 @@ rawEventsDF = (spark
 
 # MAGIC %md-sandbox
 # MAGIC ### WRITE Stream using Delta Lake
-# MAGIC 
-# MAGIC #### General Notation
-# MAGIC Use this format to write a streaming job to a Delta Lake table.
-# MAGIC 
-# MAGIC <pre>
-# MAGIC (myDF
-# MAGIC   .writeStream
-# MAGIC   .format("delta")
-# MAGIC   .option("checkpointLocation", checkpointPath)
-# MAGIC   .outputMode("append")
-# MAGIC   .start(path)
-# MAGIC )
-# MAGIC </pre>
-# MAGIC 
-# MAGIC <img alt="Caution" title="Caution" style="vertical-align: text-bottom; position: relative; height:1.3em; top:0.0em" src="https://files.training.databricks.com/static/images/icon-warning.svg"/> While we _can_ write directly to tables using the `.table()` notation, this will create fully managed tables by writing output to a default location on DBFS. This is not best practice for production jobs.
-# MAGIC 
-# MAGIC #### Output Modes
-# MAGIC Notice, besides the "obvious" parameters, specify `outputMode`, which can take on these values
-# MAGIC * `append`: add only new records to output sink
-# MAGIC * `complete`: rewrite full output - applicable to aggregations operations
-# MAGIC 
-# MAGIC <img alt="Caution" title="Caution" style="vertical-align: text-bottom; position: relative; height:1.3em; top:0.0em" src="https://files.training.databricks.com/static/images/icon-warning.svg"/> At present, `update` mode is **not** supported for streaming Delta jobs.
-# MAGIC 
-# MAGIC #### Checkpointing
-# MAGIC 
-# MAGIC When defining a Delta Lake streaming query, one of the options that you need to specify is the location of a checkpoint directory.
-# MAGIC 
-# MAGIC `.writeStream.format("delta").option("checkpointLocation", <path-to-checkpoint-directory>) ...`
-# MAGIC 
-# MAGIC This is actually a structured streaming feature. It stores the current state of your streaming job.
-# MAGIC 
-# MAGIC Should your streaming job stop for some reason and you restart it, it will continue from where it left off.
-# MAGIC 
-# MAGIC <img alt="Caution" title="Caution" style="vertical-align: text-bottom; position: relative; height:1.3em; top:0.0em" src="https://files.training.databricks.com/static/images/icon-warning.svg"/> If you do not have a checkpoint directory, when the streaming job stops, you lose all state around your streaming job and upon restart, you start from scratch.
-# MAGIC 
-# MAGIC <img alt="Caution" title="Caution" style="vertical-align: text-bottom; position: relative; height:1.3em; top:0.0em" src="https://files.training.databricks.com/static/images/icon-warning.svg"/> Also note that every streaming job should have its own checkpoint directory: no sharing.
 
 # COMMAND ----------
 
@@ -234,6 +197,11 @@ geoForLookupDF = (spark
 # COMMAND ----------
 
 # MAGIC %md NOTE: You will not be able to run this command until the `rawEventsDF` has initialized.
+
+# COMMAND ----------
+
+import time
+time.sleep(30)
 
 # COMMAND ----------
 
@@ -313,6 +281,11 @@ for s in spark.streams.active:
 
 # COMMAND ----------
 
+import time
+time.sleep(30)
+
+# COMMAND ----------
+
 from pyspark.sql.functions import window, hour
 
 (spark.readStream
@@ -339,6 +312,11 @@ from pyspark.sql.functions import window, hour
 
 # COMMAND ----------
 
+import time
+time.sleep(30)
+
+# COMMAND ----------
+
 spark.sql("""
   DROP TABLE IF EXISTS grouped_count
 """)
@@ -358,10 +336,6 @@ spark.sql("""
 # MAGIC <img alt="Side Note" title="Side Note" style="vertical-align: text-bottom; position: relative; height:1.75em; top:0.05em; transform:rotate(15deg)" src="https://files.training.databricks.com/static/images/icon-note.webp"/> Certain options can be set to change this behavior, but have other limitations attached. For more details, refer to [Delta Streaming: Ignoring Updates and Deletes](https://docs.databricks.com/delta/delta-streaming.html#ignoring-updates-and-deletes).
 # MAGIC 
 # MAGIC The gold Delta table we have just registered will perform a static read of the current state of the data each time we run the following query.
-
-# COMMAND ----------
-
-#TODO:
 
 # COMMAND ----------
 
@@ -410,7 +384,7 @@ spark.sql("""
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Batch Load Data into Bronze Table
+# MAGIC ## Batch Load Data into Bronze Table - And It Flows Through The SAME Streaming LOGIC
 # MAGIC 
 # MAGIC We can use the same pipeline to process batch data.
 # MAGIC 
@@ -476,28 +450,5 @@ for batch in range(4):
 
 # COMMAND ----------
 
-for s in spark.streams.active:
-    s.stop()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Summary
-# MAGIC 
-# MAGIC Delta Lake is ideally suited for use in streaming data lake contexts.
-# MAGIC 
-# MAGIC Use the Delta Lake architecture to craft raw, query, and summary tables to produce beautiful visualizations of key business metrics.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Additional Topics & Resources
-# MAGIC 
-# MAGIC * <a href="https://docs.databricks.com/delta/delta-streaming.html#as-a-sink" target="_blank">Delta Streaming Write Notation</a>
-# MAGIC * <a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#" target="_blank">Structured Streaming Programming Guide</a>
-# MAGIC * <a href="https://www.youtube.com/watch?v=rl8dIzTpxrI" target="_blank">A Deep Dive into Structured Streaming</a> by Tagatha Das. This is an excellent video describing how Structured Streaming works.
-# MAGIC * <a href="http://lambda-architecture.net/#" target="_blank">Lambda Architecture</a>
-# MAGIC * <a href="https://bennyaustin.wordpress.com/2010/05/02/kimball-and-inmon-dw-models/#" target="_blank">Data Warehouse Models</a>
-# MAGIC * <a href="https://people.apache.org//~pwendell/spark-nightly/spark-branch-2.1-docs/latest/structured-streaming-kafka-integration.html#" target="_blank">Reading structured streams from Kafka</a>
-# MAGIC * <a href="http://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html#creating-a-kafka-source-stream#" target="_blank">Create a Kafka Source Stream</a>
-# MAGIC * <a href="https://docs.databricks.com/delta/delta-intro.html#case-study-multi-hop-pipelines#" target="_blank">Multi Hop Pipelines</a>
+#for s in spark.streams.active:
+    #s.stop()
